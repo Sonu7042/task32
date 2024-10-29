@@ -22,13 +22,14 @@ app.post("/register", (req, res) => {
       throw new Error("Please enter a username and password");
     }
 
-
+    
     //updated
-    let users = [];  
+    
     if (fs.existsSync(userData)) {
       const fileData = fs.readFileSync(userData, "utf-8");
       users = JSON.parse(fileData);
     }
+
 
     const alreadyExists = users.find((value) => value.username === username);
     if (alreadyExists) {
@@ -42,6 +43,8 @@ app.post("/register", (req, res) => {
         throw new Error("Error writing to file");
       }
 
+
+    
       res.status(201).json({
         message: "User created successfully",
         success: true,
@@ -49,6 +52,9 @@ app.post("/register", (req, res) => {
         User: user,
       });
     });
+
+
+
   } catch (err) {
     res.status(400).json({
       message: err.message || err,
