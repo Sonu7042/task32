@@ -1,5 +1,5 @@
 const jwt = require("jsonwebtoken");
-const secretKey = "computer12345";
+require("dotenv").config()
 
 const protectRoute = (req, res, next) => {
   try {
@@ -7,12 +7,12 @@ const protectRoute = (req, res, next) => {
     if (!token) {
       throw new Error("Wrong User");
     }
-
-    const verifyUser = jwt.verify(token, secretKey);
+    const verifyUser = jwt.verify(token, process.env.SECRET_KEY);
 
     req.user = verifyUser;
     next();
 
+  
 
   } catch (err) {
     res.status(401).json({
@@ -22,5 +22,9 @@ const protectRoute = (req, res, next) => {
     });
   }
 };
+
+
+
+
 
 module.exports = protectRoute;

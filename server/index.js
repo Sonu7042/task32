@@ -2,9 +2,8 @@ const express = require("express");
 const jwt = require("jsonwebtoken");
 const cors = require("cors");
 const protectRoute = require("./middleware/protectRoute");
-const fs = require("fs");
-
-const secretKey = "computer12345";
+const fs =require("fs");
+require('dotenv').config();
 
 const app = express();
 app.use(express.json());
@@ -12,6 +11,16 @@ app.use(cors());
 
 const userData = "user.json";
 let users = [];
+
+
+if (process.env.NODE_ENV !== "production") {
+  if (fs.existsSync(userData)) {
+    const fileData = fs.readFileSync(userData, "utf-8");
+    users = JSON.parse(fileData);
+  }
+}
+
+
 
 app.post("/register", (req, res) => {
   try {
@@ -22,15 +31,6 @@ app.post("/register", (req, res) => {
       throw new Error("Please enter a username and password");
     }
 
-    
-    //updated
-    
-    if (fs.existsSync(userData)) {
-      const fileData = fs.readFileSync(userData, "utf-8");
-      users = JSON.parse(fileData);
-    }
-
-
     const alreadyExists = users.find((value) => value.username === username);
     if (alreadyExists) {
       throw new Error("This user already exists");
@@ -38,23 +38,16 @@ app.post("/register", (req, res) => {
 
     users.push(user);
 
-    fs.writeFile(userData, JSON.stringify(users), (err) => {
-      if (err) {
-        throw new Error("Error writing to file");
-      }
+    if (process.env.NODE_ENV !== "production") {
+      fs.writeFileSync(userData, JSON.stringify(users), "utf-8");
+    }
 
-
-    
-      res.status(201).json({
-        message: "User created successfully",
-        success: true,
-        error: false,
-        User: user,
-      });
+    res.status(201).json({
+      message: "User created successfully",
+      success: true,
+      error: false,
+      User: user,
     });
-
-
-
   } catch (err) {
     res.status(400).json({
       message: err.message || err,
@@ -64,30 +57,24 @@ app.post("/register", (req, res) => {
   }
 });
 
+
+
 app.post("/login", (req, res) => {
   try {
-    const user = req.body;
+    const { username, password } = req.body;
 
-    if (fs.existsSync(userData)) {
-      const fileData = fs.readFileSync(userData, "utf-8");
-      users = JSON.parse(fileData);
+    const user = users.find((value) => value.username === username && value.password === password);
+    if (!user) {
+      throw new Error("Please register first");
     }
 
-    const alreadyFind = users.find(
-      (value) =>
-        value.username === user.username && value.password === user.password
-    );
-    if (!alreadyFind) {
-      throw new Error("Pls first register");
-    }
-
-    const token = jwt.sign({ user }, secretKey, { expiresIn: "1h" });
+    const token = jwt.sign({ username }, process.env.SECRET_KEY, { expiresIn: "1h" });
 
     res.status(200).json({
       token: token,
       success: true,
       error: false,
-      message: "user logged in successfully",
+      message: "User logged in successfully",
     });
   } catch (err) {
     res.status(400).json({
@@ -98,16 +85,12 @@ app.post("/login", (req, res) => {
   }
 });
 
-
+// Protected route
 app.get("/", protectRoute, (req, res) => {
-  if(fs.existsSync(userData)){
-    const fileData= fs.readFileSync(userData, "utf-8")
-    const user=(JSON.parse(fileData))
-    res.send(user);
-  }
- 
+  res.send(users);
 });
 
-app.listen(9000, () => {
+
+app.listen(9000,()=>{
   console.log("Server is running on port 9000");
-});
+})
