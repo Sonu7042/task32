@@ -2,9 +2,8 @@ const express = require("express");
 const jwt = require("jsonwebtoken");
 const cors = require("cors");
 const protectRoute = require("./middleware/protectRoute");
-const fs =require("fs");
-require('dotenv').config();
-
+const fs = require("fs");
+require("dotenv").config();
 const app = express();
 app.use(express.json());
 app.use(cors());
@@ -12,16 +11,35 @@ app.use(cors());
 const userData = "user.json";
 let users = [];
 
-
-if (process.env.NODE_ENV !== "production") {
+const readData = () => {
   if (fs.existsSync(userData)) {
-    const fileData = fs.readFileSync(userData, "utf-8");
-    users = JSON.parse(fileData);
+    const data = fs.readFileSync(userData, "utf8");
+    users = JSON.parse(data);
   }
-}
+};
+readData();
 
 
 
+
+const writeData = (user) => {
+  fs.readFile(userData, "utf8", (err, result) => {
+    if (err) {
+      console.log("Failed");
+    }
+
+    if (result) {
+      users = JSON.parse(result);
+    }
+
+    users.push(user);
+    fs.writeFile(userData, JSON.stringify(users), (err, result) => {});
+  });
+};
+
+
+
+  
 app.post("/register", (req, res) => {
   try {
     const user = req.body;
@@ -36,11 +54,7 @@ app.post("/register", (req, res) => {
       throw new Error("This user already exists");
     }
 
-    users.push(user);
-
-    if (process.env.NODE_ENV !== "production") {
-      fs.writeFileSync(userData, JSON.stringify(users), "utf-8");
-    }
+    writeData(user);
 
     res.status(201).json({
       message: "User created successfully",
@@ -48,6 +62,8 @@ app.post("/register", (req, res) => {
       error: false,
       User: user,
     });
+
+
   } catch (err) {
     res.status(400).json({
       message: err.message || err,
@@ -63,12 +79,16 @@ app.post("/login", (req, res) => {
   try {
     const { username, password } = req.body;
 
-    const user = users.find((value) => value.username === username && value.password === password);
+    const user = users.find(
+      (value) => value.username === username && value.password === password
+    );
     if (!user) {
       throw new Error("Please register first");
     }
 
-    const token = jwt.sign({ username }, process.env.SECRET_KEY, { expiresIn: "1h" });
+    const token = jwt.sign({ username }, process.env.SECRET_KEY, {
+      expiresIn: "1h",
+    });
 
     res.status(200).json({
       token: token,
@@ -85,12 +105,14 @@ app.post("/login", (req, res) => {
   }
 });
 
-// Protected route
+
 app.get("/", protectRoute, (req, res) => {
   res.send(users);
 });
 
 
-app.listen(9000,()=>{
+
+
+app.listen(9000, () => {
   console.log("Server is running on port 9000");
-})
+});
